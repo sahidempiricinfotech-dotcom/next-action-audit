@@ -1,0 +1,6 @@
+/app/                      @web-team
+/app/admin/                @admin-team
+/src/components/           @web-team
+/src/actions/billing.ts    @payments-team
+/src/actions/auth.ts       @auth-team
+/src/actions/              @app-team
