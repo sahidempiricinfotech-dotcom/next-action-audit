@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String             @id @default(cuid())
+  email            String             @unique
+  name             String?
+  sessions         Session[]
+  accounts         Account[]
+  roles            Role[]
+  billingProfiles  BillingProfile[]
+  invoices         Invoice[]
+  payments         Payment[]
+  orders           Order[]
+  carts            Cart[]
+  posts             Post[]
+  emailPreference  EmailPreference?
+  teamInvites      TeamInvite[]       @relation("Inviter")
+  supportTickets   SupportTicket[]    @relation("Requester")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                String    @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  credentialHash    String?
+  lastSyncedAt      DateTime?
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  userId      String
+  name        String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permissions Permission[]
+  @@unique([userId, name])
+}
+
+model Permission {
+  id     String @id @default(cuid())
+  roleId String
+  name   String
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+}
+
+model BillingProfile {
+  id          String    @id @default(cuid())
+  userId      String
+  displayName String
+  address     String?
+  theme       String?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments    Payment[]
+}
+
+model Invoice {
+  id         String  @id @default(cuid())
+  userId     String
+  totalCents Int
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id               String          @id @default(cuid())
+  userId           String
+  billingProfileId String?
+  amountCents      Int
+  status           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  billingProfile   BillingProfile? @relation(fields: [billingProfileId], references: [id])
+}
+
+model Order {
+  id        String      @id @default(cuid())
+  userId    String
+  status    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     OrderItem[]
+}
+
+model OrderItem {
+  id       String @id @default(cuid())
+  orderId  String
+  sku      String
+  quantity Int
+  order    Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Cart {
+  id          String     @id @default(cuid())
+  userId      String
+  promoCodeId String?
+  totalCents  Int
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promoCode   PromoCode? @relation(fields: [promoCodeId], references: [id])
+}
+
+model PromoCode {
+  id              String @id @default(cuid())
+  code            String @unique
+  discountPercent Int
+  carts           Cart[]
+}
+
+model Post {
+  id        String  @id @default(cuid())
+  authorId  String
+  title     String
+  body      String
+  published Boolean @default(false)
+  author    User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model ContactSubmission {
+  id        String   @id @default(cuid())
+  email     String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  actorId   String?
+  metadata  Json
+  createdAt DateTime @default(now())
+}
+
+model AppConfig {
+  key   String @id
+  value String
+}
+
+model EmailPreference {
+  id             String  @id @default(cuid())
+  userId         String  @unique
+  newsletter     Boolean @default(false)
+  productUpdates Boolean @default(false)
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TeamInvite {
+  id          String @id @default(cuid())
+  email       String
+  invitedById String
+  invitedBy   User   @relation("Inviter", fields: [invitedById], references: [id], onDelete: Cascade)
+}
+
+model SupportTicket {
+  id          String             @id @default(cuid())
+  requesterId String
+  subject     String
+  requester   User               @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  attachments TicketAttachment[]
+}
+
+model TicketAttachment {
+  id       String        @id @default(cuid())
+  ticketId String
+  url      String
+  ticket   SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
